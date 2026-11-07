@@ -1,0 +1,22 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+pandas = ">=2.2"
+pyyaml = ">=6.0"
+
+[dev-packages]
+pytest = ">=8.0"
+
+[duckdb]
+duckdb = ">=1.0"
+
+[requires]
+python_version = "3.12"
+
+[scripts]
+etl = "python -m etl.run"
+etl-duckdb = "python -m etl.run --duckdb"
+test = "pytest -q"

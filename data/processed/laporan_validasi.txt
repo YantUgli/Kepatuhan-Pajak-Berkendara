@@ -1,0 +1,48 @@
+==============================================================================
+RINGKASAN VALIDASI
+==============================================================================
+
+Jumlah baris per tabel:
+  - dim_waktu                                13 baris
+  - dim_wilayah                              36 baris
+  - dim_jenis_kendaraan                       5 baris
+  - dim_fungsi_kendaraan                      3 baris
+  - fakta_kepatuhan_kendaraan             6,690 baris
+  - bantu_rata_pajak_tahunan                 13 baris
+
+Null per measure (fakta_kepatuhan_kendaraan):
+  - jumlah_kendaraan_total                   60 null
+  - jumlah_tidak_daftar_ulang                 0 null
+  - jumlah_belum_daftar_ulang                 0 null
+  - jumlah_daftar_ulang                      60 null
+  - tingkat_kepatuhan                     1,609 null
+  - estimasi_pajak_hilang                     0 null
+
+Catatan proses:
+  - [kendaraan_total] bentuk=long, kolom measure sumber='jumlah_kendaraan'
+  - [kendaraan_total] hasil akhir: 6,630 baris, grain=('tahun', 'cabang_pelayanan', 'jenis_kendaraan', 'fungsi_kendaraan')
+  - [tidak_daftar_ulang] bentuk=long, kolom measure sumber='jumlah_kendaraan'
+  - [tidak_daftar_ulang] 240 baris duplikat pada grain digabung (sum measure)
+  - [tidak_daftar_ulang] hasil akhir: 6,390 baris, grain=('tahun', 'cabang_pelayanan', 'jenis_kendaraan', 'fungsi_kendaraan')
+  - [belum_daftar_ulang] bentuk=long, kolom measure sumber='jumlah_kendaraan'
+  - [belum_daftar_ulang] hasil akhir: 6,630 baris, grain=('tahun', 'cabang_pelayanan', 'jenis_kendaraan', 'fungsi_kendaraan')
+  - [pajak_denda] bentuk=long, kolom measure sumber='jumlah_pendapatan'
+  - [pajak_denda] 858 baris duplikat pada grain digabung (sum measure)
+  - [pajak_denda] hasil akhir: 26 baris, grain=('tahun', 'jenis_pajak')
+  - [build] 300 sel 'jumlah_tidak_daftar_ulang' kosong -> diisi 0 (tidak ada kejadian)
+  - [build] 60 sel 'jumlah_belum_daftar_ulang' kosong -> diisi 0 (tidak ada kejadian)
+  - [build] 60 baris tanpa 'jumlah_kendaraan_total' -> dibiarkan NaN (penyebut tidak diketahui, tingkat_kepatuhan jadi null)
+  - [build] 255 baris punya (total - tidak - belum) < 0 -> di-floor ke 0 (inkonsistensi sumber, aturan Bagian 7 butir 5)
+  - [build] fact terbangun: 6,690 baris, 13 tahun, 36 cabang pelayanan
+  - rentang tahun pada fact: 2013-2025 (13 tahun unik)
+  - total estimasi_pajak_hilang seluruh periode: Rp 85,365,256,082,841
+  - rata-rata tingkat_kepatuhan (unweighted): 0.6744
+
+PERINGATAN (4):
+  ! 60 null (0.9%) pada measure 'jumlah_kendaraan_total'.
+  ! 60 null (0.9%) pada measure 'jumlah_daftar_ulang'.
+  ! 1,609 null (24.1%) pada measure 'tingkat_kepatuhan'.
+  ! 255 baris di-floor ke 0 pada 'jumlah_daftar_ulang' (total - tidak - belum bernilai negatif).
+
+STATUS: LOLOS -- star schema siap dipakai.
+==============================================================================

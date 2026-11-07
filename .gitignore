@@ -1,0 +1,27 @@
+# Data (mentah maupun hasil olahan) tidak ikut di-commit
+# data/
+# !data/raw/.gitkeep
+# !data/processed/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.Python
+
+# Pipenv (Pipfile & Pipfile.lock TETAP di-commit)
+.env
+
+# Tooling
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
