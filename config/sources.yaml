@@ -1,0 +1,204 @@
+# =============================================================================
+# config/sources.yaml
+# Peta: nama file mentah -> kolom sumber -> kolom baku (standar internal ETL).
+#
+# !! PERLU DIKONFIRMASI !!
+# Nilai di file ini adalah PETA AWAL berdasarkan Bagian 4a brief. Header CSV asli
+# dari Open Data Jabar bisa sedikit berbeda antar dataset/versi. Setelah CSV
+# diletakkan di data/raw/, jalankan:
+#
+#     pipenv run python -m etl.run --inspect
+#
+# perintah itu mencetak header asli tiap file + hasil pemetaannya. Kalau ada kolom
+# yang tidak terpetakan, cukup UBAH YAML INI (bagian `alias_kolom` atau `rename`
+# pada sumber terkait) -- JANGAN mengubah kode Python.
+# =============================================================================
+
+meta:
+  # Rentang tahun yang diharapkan. Menyimpang -> WARNING (bukan fatal).
+  # Dikonfirmasi dari data asli (API Satu Data Jabar "Galura", lihat catatan extract
+  # di README): data tersedia 2013-2025, lebih panjang dari dugaan awal brief (2013-2023).
+  tahun_min: 2013
+  tahun_max: 2025
+  encoding: utf-8
+  # Pemisah CSV; "auto" = biarkan pandas menebak (python engine sniffing).
+  sep: auto
+
+# -----------------------------------------------------------------------------
+# Alias kolom global: kolom_baku -> daftar kemungkinan nama di CSV sumber.
+# Pencocokan dilakukan setelah nama kolom dinormalisasi (lowercase, spasi -> "_").
+# Urutan menentukan prioritas.
+# -----------------------------------------------------------------------------
+alias_kolom:
+  kode_provinsi: [kode_provinsi, bps_kode_provinsi, kd_provinsi]
+  nama_provinsi: [nama_provinsi, bps_nama_provinsi, provinsi]
+  kode_kabupaten_kota:
+    [kode_kabupaten_kota, bps_kode_kabupaten_kota, kode_kab_kota, kd_kabupaten_kota]
+  nama_kabupaten_kota:
+    [nama_kabupaten_kota, bps_nama_kabupaten_kota, nama_kab_kota, kabupaten_kota]
+  cabang_pelayanan:
+    [cabang_pelayanan, nama_cabang_pelayanan, cabang, cabang_pelayanan_samsat, upt, nama_upt, samsat]
+  jenis_kendaraan: [jenis_kendaraan, nama_jenis_kendaraan, jenis]
+  fungsi_kendaraan: [fungsi_kendaraan, nama_fungsi_kendaraan, fungsi]
+  jenis_pajak:
+    [jenis_pajak, jenis_pkb, jenis_pajak_kendaraan_bermotor, nama_jenis_pajak, jenis_pajak_daerah, jenis_penerimaan]
+  satuan: [satuan, satuan_data]
+  tahun: [tahun, thn, year, periode]
+
+# -----------------------------------------------------------------------------
+# Normalisasi ejaan nilai dimensi.
+# Format: kolom -> { "Nilai Baku": [varian, varian, ...] }
+# Varian dicocokkan case-insensitive setelah trim + rapikan spasi ganda.
+# Nilai yang tidak ada di daftar TIDAK dibuang -- hanya di-Title Case dan
+# dilaporkan sebagai "nilai belum dipetakan" di log validasi.
+# -----------------------------------------------------------------------------
+normalisasi_teks:
+  # Dikonfirmasi dari data asli (API Satu Data Jabar, dataset Bapenda). 5 kategori baku
+  # ini dipakai di kendaraan_total / tidak_daftar_ulang / belum_daftar_ulang.
+  # PENTING: pencocokan nilai bersifat EXACT (bukan substring) setelah normalisasi
+  # spasi -- karena nilai sumber memakai koma di dalamnya, tulis varian PERSIS
+  # dengan koma agar cocok (mis. "sedan, jeep, minibus"), bukan tanpa koma.
+  #
+  # ASUMSI PENTING (didokumentasikan lagi di docs/data_dictionary.md):
+  # `kendaraan_total.csv` mengganti nama kategori "Sedan, Jeep, Minibus" menjadi
+  # "Sedan, Jeep, Station Wagon" persis mulai tahun 2022 (nilai Minibus jadi 0 dan
+  # Station Wagon muncul dengan skala setara di tahun yang sama), sementara
+  # `tidak_daftar_ulang.csv`/`belum_daftar_ulang.csv` TETAP memakai label lama di
+  # semua tahun. Ini kategori kendaraan yang sama, hanya ganti nama di sumbernya --
+  # keduanya digabung jadi satu kategori baku supaya grain tetap bisa di-join across
+  # tahun 2022-2025 (tanpa penggabungan ini, ~420 kombinasi grain kehilangan
+  # penyebut jumlah_kendaraan_total dan tingkat_kepatuhan-nya jadi null).
+  jenis_kendaraan:
+    "Sepeda Motor": ["sepeda motor, scooter", "sepeda motor"]
+    "Sedan/Jeep/Minibus/Station Wagon": ["sedan, jeep, minibus", "sedan, jeep, station wagon"]
+    "Bus/Microbus": ["bus, microbus"]
+    "Truck/Pick Up": ["truck, pick up"]
+    "Alat Berat": ["alat berat"]
+  fungsi_kendaraan:
+    "Pribadi": [pribadi, perseorangan, orang pribadi, bukan umum, non umum]
+    "Umum": [umum, angkutan umum]
+    "Dinas": [dinas, pemerintah, instansi pemerintah, dinas pemerintah]
+    "TNI/Polri": [tni/polri, tni-polri, tni polri, tni, polri]
+  cabang_pelayanan:
+    # Seluruh 4 dataset inti berasal dari satu sistem sumber yang sama (API Satu Data
+    # Jabar, skema `bapenda`) sehingga ejaan cabang pelayanan sudah konsisten -- tidak
+    # ada varian ejaan yang diketahui saat ini. Tambahkan pemetaan di sini bila log
+    # validasi ("belum dipetakan") melaporkan dua ejaan yang sebenarnya cabang sama.
+  # Nilai asli: "PKB POKOK" / "PKB DENDA" (lihat data/raw/pajak_denda.csv).
+  jenis_pajak:
+    "PKB Pokok": ["pkb pokok", "pkb", "pajak kendaraan bermotor", "pajak kendaraan"]
+    "PKB Denda": ["pkb denda", "denda pkb", "denda pajak kendaraan bermotor"]
+    "BBNKB": ["bbnkb", "bea balik nama kendaraan bermotor", "bea balik nama"]
+    "BBNKB Denda": ["bbnkb denda", "denda bbnkb", "denda bea balik nama"]
+
+# -----------------------------------------------------------------------------
+# Dataset inti (WAJIB, Bagian 4a brief)
+# bentuk: "long"  -> satu kolom measure, kategori sudah menjadi baris
+#         "wide"  -> kategori tersebar sebagai kolom, akan di-melt (unpivot)
+#         "auto"  -> deteksi otomatis: kalau kolom measure_sumber ada -> long,
+#                    kalau tidak -> wide (semua kolom non-id dianggap kategori)
+# -----------------------------------------------------------------------------
+sumber:
+  kendaraan_total:
+    file: data/raw/kendaraan_total.csv
+    wajib: true
+    deskripsi: >-
+      Jumlah Kendaraan Berdasarkan Jenis Kendaraan, Fungsi Kendaraan, dan Cabang
+      Pelayanan di Jawa Barat.
+    bentuk: auto
+    keys: [tahun, cabang_pelayanan, jenis_kendaraan, fungsi_kendaraan]
+    measure_sumber: [jumlah_kendaraan, jumlah, jumlah_unit, nilai]
+    measure: jumlah_kendaraan_total
+    # Dipakai HANYA bila bentuk efektif = wide. id_vars = kolom yang dipertahankan.
+    unpivot:
+      id_vars: [tahun, cabang_pelayanan, fungsi_kendaraan]
+      var_name: jenis_kendaraan
+    # rename eksplisit: nama_kolom_di_csv -> kolom_baku (menang atas alias_kolom)
+    rename: {}
+
+  tidak_daftar_ulang:
+    file: data/raw/tidak_daftar_ulang.csv
+    wajib: true
+    deskripsi: >-
+      Jumlah Kendaraan yang Tidak Daftar Ulang Berdasarkan Jenis Kendaraan,
+      Fungsi Kendaraan, dan Cabang Pelayanan di Jawa Barat.
+    bentuk: auto
+    keys: [tahun, cabang_pelayanan, jenis_kendaraan, fungsi_kendaraan]
+    measure_sumber: [jumlah_kendaraan, jumlah, jumlah_unit, nilai]
+    measure: jumlah_tidak_daftar_ulang
+    unpivot:
+      id_vars: [tahun, cabang_pelayanan, fungsi_kendaraan]
+      var_name: jenis_kendaraan
+    rename: {}
+
+  belum_daftar_ulang:
+    file: data/raw/belum_daftar_ulang.csv
+    wajib: true
+    deskripsi: >-
+      Jumlah Kendaraan yang Belum Daftar Ulang Berdasarkan Jenis Kendaraan,
+      Fungsi Kendaraan, dan Cabang Pelayanan di Jawa Barat.
+    bentuk: auto
+    keys: [tahun, cabang_pelayanan, jenis_kendaraan, fungsi_kendaraan]
+    measure_sumber: [jumlah_kendaraan, jumlah, jumlah_unit, nilai]
+    measure: jumlah_belum_daftar_ulang
+    unpivot:
+      id_vars: [tahun, cabang_pelayanan, fungsi_kendaraan]
+      var_name: jenis_kendaraan
+    rename: {}
+
+  pajak_denda:
+    file: data/raw/pajak_denda.csv
+    wajib: true
+    deskripsi: >-
+      Jumlah Pajak dan Denda Kendaraan Bermotor Berdasarkan Jenis Pajak
+      Kendaraan Bermotor. Dipakai untuk menghitung rata_pajak_per_kendaraan.
+    bentuk: auto
+    keys: [tahun, jenis_pajak]
+    # "jumlah_pendapatan" adalah nama kolom asli di data/raw/pajak_denda.csv.
+    measure_sumber: [jumlah_pendapatan, nilai, jumlah, jumlah_pajak_denda, nilai_pajak, jumlah_nilai]
+    measure: nilai_rupiah
+    unpivot:
+      id_vars: [tahun]
+      var_name: jenis_pajak
+    rename: {}
+
+# -----------------------------------------------------------------------------
+# Monetisasi (Bagian 7 butir 6 brief).
+# rata_pajak_per_kendaraan[tahun] =
+#     SUM(nilai_rupiah pajak_denda yang cocok komponen_pajak)[tahun]
+#     / SUM(jumlah_kendaraan_total)[tahun]
+# -----------------------------------------------------------------------------
+monetisasi:
+  # Substring (lowercase) penanda baris KOMPONEN PAJAK (pembilang).
+  komponen_pajak: [pkb, pajak kendaraan]
+  # Substring penanda baris DENDA -> selalu dikeluarkan dari pembilang.
+  komponen_denda: [denda]
+  # Bila true dan suatu tahun tidak punya data pajak, pakai rata-rata seluruh
+  # tahun yang tersedia sebagai cadangan (dicatat sebagai warning).
+  fallback_rata_global: true
+
+# -----------------------------------------------------------------------------
+# Dataset pendukung (OPSIONAL, Bagian 4b brief).
+# Tidak dipakai MVP; ketiadaan file TIDAK menggagalkan ETL.
+# -----------------------------------------------------------------------------
+sumber_opsional:
+  target_pajak:
+    file: data/raw/target_pajak.csv
+    wajib: false
+    deskripsi: Jumlah Target Pajak Daerah Berdasarkan Jenisnya di Jawa Barat.
+  realisasi_pajak:
+    file: data/raw/realisasi_pajak.csv
+    wajib: false
+    deskripsi: Jumlah Pendapatan Pajak Daerah Berdasarkan Jenis Pajak Daerah.
+  bbnkb:
+    file: data/raw/bbnkb.csv
+    wajib: false
+    deskripsi: Jumlah BBNKB per Cabang Pelayanan.
+  esamsat:
+    file: data/raw/esamsat.csv
+    wajib: false
+    deskripsi: Jumlah Pembayaran PKB Melalui e-Samsat per Bank dan Cabang Pelayanan.
+  kendaraan_cabang:
+    file: data/raw/kendaraan_cabang.csv
+    wajib: false
+    deskripsi: Jumlah Kendaraan Bermotor Berdasarkan Cabang Pelayanan (cross-check).
