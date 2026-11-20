@@ -155,8 +155,18 @@ jaringan — ia hanya membaca file yang sudah ada di `data/raw/`.
 1. **Spasi di depan nama cabang.** Baris 2013–2018 menulis `cabang_pelayanan` tanpa
    spasi di depan, baris 2019–2025 dengan satu spasi di depan (kemungkinan migrasi
    sistem internal Bapenda). Pembersihan teks (`bersihkan_teks`, aturan Bagian 6 butir 1)
-   sudah menyatukan ini secara otomatis menjadi 36 cabang pelayanan yang benar — bukan
-   70 seperti yang terlihat di CSV mentah sebelum di-trim.
+   sudah menyatukan ini secara otomatis menjadi 36 label — bukan 70 seperti yang
+   terlihat di CSV mentah sebelum di-trim. Dua dari 36 label itu ternyata nama baru
+   cabang yang sama (lihat butir berikutnya), sehingga jumlah cabang fisik adalah 34.
+
+   **Penggantian nama dua cabang mulai 2022.** "Kabupaten Ciamis I" menjadi
+   "Kabupaten Ciamis" dan "Kabupaten Pangandaran" menjadi "Kabupaten Ciamis II Pgdrn".
+   Penggantian ini tidak serentak antardataset: `belum_daftar_ulang.csv` tetap memakai
+   "Kabupaten Ciamis I" sampai 2025, dan `pajak_denda.csv` mencampur beberapa label.
+   Tanpa penyatuan, BDU Ciamis 2022–2025 terpisah dari total kendaraannya sehingga
+   kepatuhan Ciamis dan provinsi 2022–2025 terlalu tinggi (2025: 65,93% → 65,73%).
+   Pemetaan ada di `config/sources.yaml` → `normalisasi_teks.cabang_pelayanan`;
+   label baku yang dipakai adalah "Kabupaten Ciamis" dan "Kabupaten Pangandaran".
 
 2. **Penggantian nama kategori "Sedan/Jeep/Minibus" → "Sedan/Jeep/Station Wagon".**
    `kendaraan_total.csv` berhenti memakai label "Sedan, Jeep, Minibus" persis mulai

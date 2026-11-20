@@ -84,6 +84,16 @@ normalisasi_teks:
     # Jabar, skema `bapenda`) sehingga ejaan cabang pelayanan sudah konsisten -- tidak
     # ada varian ejaan yang diketahui saat ini. Tambahkan pemetaan di sini bila log
     # validasi ("belum dipetakan") melaporkan dua ejaan yang sebenarnya cabang sama.
+    #
+    # Mulai 2022 sumber mengganti nama dua cabang: "Kabupaten Ciamis I" -> "Kabupaten
+    # Ciamis" dan "Kabupaten Pangandaran" -> "Kabupaten Ciamis II Pgdrn". Penggantian
+    # ini tidak serentak: belum_daftar_ulang.csv tetap memakai "Kabupaten Ciamis I"
+    # sampai 2025, dan pajak_denda.csv memakai "Kab. Ciamis I" serta "Kabupaten
+    # Pangandaran" di tahun-tahun tertentu. Tanpa pemetaan ini, BDU Ciamis 2022-2025
+    # terpisah dari total kendaraannya dan cabang tercatat 36, padahal fisiknya 34.
+    # Konsekuensi: cabang lain dilaporkan "belum dipetakan" di log (hanya informasi).
+    "Kabupaten Ciamis": ["kabupaten ciamis", "kabupaten ciamis i", "kab. ciamis i"]
+    "Kabupaten Pangandaran": ["kabupaten pangandaran", "kabupaten ciamis ii pgdrn"]
   # Nilai asli: "PKB POKOK" / "PKB DENDA" (lihat data/raw/pajak_denda.csv).
   jenis_pajak:
     "PKB Pokok": ["pkb pokok", "pkb", "pajak kendaraan bermotor", "pajak kendaraan"]
